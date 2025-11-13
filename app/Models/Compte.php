@@ -18,10 +18,17 @@ class Compte extends Model
         'user_id',
         'solde',
         'status',
+        'type',
+        'code_marchand',
+        'numero_client',
+        'login',
+        'password',
     ];
 
     protected $casts = [
         'solde' => 'decimal:2',
+        'password' =>'hashed',
+        'user_id' => 'string',
     ];
 
     protected static function booted()
@@ -30,13 +37,20 @@ class Compte extends Model
             if (empty($compte->numero_compte)) {
                 $compte->numero_compte = self::generateNumero();
             }
+            if ($compte->type === 'marchand' && empty($compte->code_marchand)) {
+                $compte->code_marchand = self::generateCodeMarchand();
+            }
         });
     }
 
     public static function generateNumero(): string
     {
-        // Simple account number generator: ACC + timestamp + random 4 digits
         return 'ACC' . now()->format('YmdHis') . rand(1000, 9999);
+    }
+
+    public static function generateCodeMarchand(): string
+    {
+        return 'MARCHAND' . now()->format('YmdHis') . rand(100, 999);
     }
 
     public function user()

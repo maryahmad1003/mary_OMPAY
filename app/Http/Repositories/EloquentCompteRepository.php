@@ -43,4 +43,9 @@ class EloquentCompteRepository implements CompteRepositoryInterface
         }
         return (bool) $compte->delete();
     }
+
+    public function findByNumero(string $numero): ?Compte
+    {
+        return Compte::where('numero_compte', $numero)->first();
+    }
 }

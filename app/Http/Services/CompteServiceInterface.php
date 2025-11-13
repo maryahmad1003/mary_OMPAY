@@ -7,6 +7,7 @@ interface CompteServiceInterface
     public function createCompte(array $data);
     public function getAllComptes();
     public function getCompteById(string $id);
+    public function getCompteByNumero(string $numero);
     public function updateCompte(string $id, array $data);
     public function deleteCompte(string $id);
     public function getCompte(string $id);

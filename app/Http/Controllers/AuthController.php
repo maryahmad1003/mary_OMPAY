@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use App\Http\Requests\StoreUserRequest;
 use App\Models\User;
 use App\Http\Services\AuthServiceInterface;
+use Illuminate\Support\Facades\Log;
 
 /**
  * @OA\Tag(
@@ -110,8 +111,8 @@ class AuthController extends Controller
             return response()->json(['error' => 'invalid_credentials'], 401);
         }
 
-        $this->authService->generateOTP($user);
-
+           $mary =$this->authService->generateOTP($user);
+         log::info("bonjour marie voici votre coode opt ompay mrs di ",["mary"=> $mary]);
         return response()->json([
             'message' => 'OTP sent successfully',
         ]);
@@ -161,7 +162,7 @@ class AuthController extends Controller
         $token = $user->createToken('API Token');
 
         return response()->json([
-            'access_token' => $token->plainTextToken,
+            'access_token' => $token->accessToken,
             'token_type' => 'Bearer',
         ]);
     }
@@ -206,6 +207,7 @@ class AuthController extends Controller
             'message' => 'OTP refreshed successfully',
         ]);
     }
+
 
     /**
      * Logout: revoke user's token.

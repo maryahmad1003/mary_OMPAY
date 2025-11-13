@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTransactionRequest;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Http\Services\TransactionServiceInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,7 +37,9 @@ class TransactionController extends Controller
      *         description="List of transactions",
      *         @OA\JsonContent(
      *             @OA\Property(property="data", type="array",
-     *                 @OA\Items(type="object")
+     *                 @OA\Items(type="object",
+     *                     @OA\Property(property="montant", type="string", example="+100.00")
+     *                 )
      *             )
      *         )
      *     )
@@ -45,6 +48,18 @@ class TransactionController extends Controller
     public function index(): JsonResponse
     {
         $transactions = $this->transactionService->getAllTransactions();
+
+        $transactions = $transactions->map(function ($transaction) {
+            $montant = $transaction->montant;
+            if ($transaction->type === 'depot') {
+                $montant = '+' . $montant;
+            } elseif (in_array($transaction->type, ['retrait', 'paiement'])) {
+                $montant = '-' . $montant;
+            }
+            $transaction->montant = $montant;
+            return $transaction;
+        });
+
         return response()->json(['data' => $transactions]);
     }
 
@@ -52,51 +67,69 @@ class TransactionController extends Controller
 
 
 
-    /**
-     * Perform a transfer transaction.
-     *
-     * @OA\Post(
-     *     path="/api/transactions/transfer",
-     *     summary="Perform a transfer",
-     *     tags={"Transactions"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"compte_source_id","compte_destination_id","montant"},
-     *             @OA\Property(property="compte_source_id", type="integer"),
-     *             @OA\Property(property="compte_destination_id", type="integer"),
-     *             @OA\Property(property="montant", type="number"),
-     *             @OA\Property(property="description", type="string"),
-     *             @OA\Property(property="mode", type="string")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=201,
-     *         description="Transfer completed",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="data", type="object")
-     *         )
-     *     )
-     * )
-     */
-    public function transfer(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'compte_source_id' => 'required|integer|exists:comptes,id',
-            'compte_destination_id' => 'required|integer|exists:comptes,id|different:compte_source_id',
-            'montant' => 'required|numeric|min:0.01',
-            'description' => 'string',
-            'mode' => 'string',
-        ]);
+   /**
+    * Perform a transfer transaction.
+    *
+    * @OA\Post(
+    *     path="/api/transactions/transfer",
+    *     summary="Perform a transfer",
+    *     tags={"Transactions"},
+    *     security={{"bearerAuth":{}}},
+    * @OA\RequestBody(
+    *         required=true,
+    *         @OA\JsonContent(
+    *             required={"numero","montant"},
+    *             @OA\Property(property="numero", type="string", example="771234567"),
+    *             @OA\Property(property="montant", type="number", example=100.00)
+    *         )
+    *     ),
+    *     @OA\Response(
+    *         response=201,
+    *         description="Transfer completed",
+    *         @OA\JsonContent(
+    *             @OA\Property(property="data", type="object")
+    *         )
+    *     )
+    * )
+    */
+   public function transfer(Request $request): JsonResponse
+   {
+       $data = $request->validate([
+           'numero' => 'required|string',
+           'montant' => 'required|numeric|min:0.01',
+           'description' => 'string',
+           'mode' => 'string',
+       ]);
 
-        $data['type'] = 'transfert';
-        $data['status'] = 'pending';
+       $sourceCompte = $request->user()->compte;
+       if (!$sourceCompte) {
+           return response()->json(['error' => 'source_compte_not_found'], 404);
+       }
 
-        $transaction = $this->transactionService->createTransaction($data);
+       // Find destination user by telephone
+       $destUser = User::where('telephone', $data['numero'])->first();
+       if (!$destUser) {
+           return response()->json(['error' => 'destination_not_found'], 404);
+       }
 
-        return response()->json(['data' => $transaction], 201);
-    }
+       $destCompte = $destUser->compte;
+       if (!$destCompte) {
+           return response()->json(['error' => 'destination_compte_not_found'], 404);
+       }
+
+       if ($sourceCompte->id === $destCompte->id) {
+           return response()->json(['error' => 'cannot_transfer_to_self'], 400);
+       }
+
+       $data['compte_source_id'] = $sourceCompte->id;
+       $data['compte_destination_id'] = $destCompte->id;
+       $data['type'] = 'transfert';
+       $data['status'] = 'completed';
+
+       $transaction = $this->transactionService->createTransaction($data);
+
+       return response()->json(['data' => $transaction], 201);
+   }
 
     /**
      * Perform a payment transaction.
@@ -109,11 +142,9 @@ class TransactionController extends Controller
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"compte_source_id","montant"},
-     *             @OA\Property(property="compte_source_id", type="integer"),
-     *             @OA\Property(property="montant", type="number"),
-     *             @OA\Property(property="description", type="string"),
-     *             @OA\Property(property="mode", type="string")
+     *             required={"numero","montant"},
+     *             @OA\Property(property="numero", type="string", description="Numéro de téléphone ou code marchand"),
+     *             @OA\Property(property="montant", type="number")
      *         )
      *     ),
      *     @OA\Response(
@@ -128,14 +159,25 @@ class TransactionController extends Controller
     public function payment(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'compte_source_id' => 'required|integer|exists:comptes,id',
+            'numero' => 'required|string',
             'montant' => 'required|numeric|min:0.01',
-            'description' => 'string',
-            'mode' => 'string',
         ]);
 
-        $data['type'] = 'retrait'; // Assuming payment is a withdrawal
-        $data['status'] = 'pending';
+        $sourceCompte = $request->user()->compte;
+        if (!$sourceCompte) {
+            return response()->json(['error' => 'source_compte_not_found'], 404);
+        }
+
+        if ($sourceCompte->solde < $data['montant']) {
+            return response()->json(['error' => 'insufficient_balance'], 400);
+        }
+
+        // Debit the source compte
+        $sourceCompte->decrement('solde', $data['montant']);
+
+        $data['compte_source_id'] = $sourceCompte->id;
+        $data['type'] = 'paiement';
+        $data['status'] = 'completed';
 
         $transaction = $this->transactionService->createTransaction($data);
 

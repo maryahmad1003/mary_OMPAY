@@ -17,6 +17,8 @@ class StoreCompteRequest extends FormRequest
             'user_id' => ['required', 'uuid', 'exists:users,id'],
             'solde' => ['nullable', 'numeric', 'min:0'],
             'status' => ['nullable', 'in:actif,suspendu'],
+            'type' => ['nullable', 'in:client,marchand'],
+            'code_marchand' => ['nullable', 'string', 'unique:comptes,code_marchand'],
         ];
     }
 

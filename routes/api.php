@@ -27,16 +27,21 @@ Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/auth/verify-otp', [AuthController::class, 'verifyOTP']);
 Route::post('/auth/refresh', [AuthController::class, 'refresh']);
-Route::post('/auth/logout', [AuthController::class, 'logout'])->middleware(['auth.cookie', 'auth:api']);
+Route::post('/auth/logout', [AuthController::class, 'logout'])->middleware(['auth:api']);
 
 // Protected routes
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth:api'])->group(function () {
+    // Compte dashboard
+    Route::get('/compte/dashboard', [CompteController::class, 'dashboard']);
+
     // Comptes CRUD
-    Route::get('/comptes', [CompteController::class, 'index']);
     Route::post('/comptes', [CompteController::class, 'store']);
-    Route::get('/comptes/{id}', [CompteController::class, 'show']);
-    Route::put('/comptes/{id}', [CompteController::class, 'update']);
-    Route::delete('/comptes/{id}', [CompteController::class, 'destroy']);
+
+    // Compte specific endpoints
+    Route::get('/compte/{id}/solde', [CompteController::class, 'getSolde']);
+    Route::post('/compte/{id}/transfert', [CompteController::class, 'transfert']);
+    Route::post('/compte/{id}/paiement', [CompteController::class, 'paiement']);
+    Route::get('/compte/{id}/transaction', [CompteController::class, 'getTransactions']);
 
     // Transactions
     Route::get('/transactions', [TransactionController::class, 'index']);

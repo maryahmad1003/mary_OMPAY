@@ -50,4 +50,9 @@ class CompteService implements CompteServiceInterface
     {
         return $this->repo->delete($id);
     }
+
+    public function getCompteByNumero(string $numero)
+    {
+        return $this->repo->findByNumero($numero);
+    }
 }

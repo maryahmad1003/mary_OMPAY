@@ -1,7 +1,7 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "title": "MOMPAY API",
+        "title": "OMPAY API",
         "description": "API pour le système de paiement mobile MOMPAY",
         "version": "1.0.0"
     },
@@ -255,39 +255,6 @@
             }
         },
         "/api/comptes": {
-            "get": {
-                "tags": [
-                    "Comptes"
-                ],
-                "summary": "Get all comptes",
-                "description": "Display a listing of comptes.",
-                "operationId": "4059c2a0b4cce9e57227146f5b16138d",
-                "responses": {
-                    "200": {
-                        "description": "List of comptes",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "object"
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            },
             "post": {
                 "tags": [
                     "Comptes"
@@ -305,8 +272,8 @@
                                 ],
                                 "properties": {
                                     "user_id": {
-                                        "type": "integer",
-                                        "example": 1
+                                        "type": "string",
+                                        "example": "uuid"
                                     },
                                     "solde": {
                                         "type": "number",
@@ -319,6 +286,18 @@
                                             "inactif"
                                         ],
                                         "example": "actif"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "client",
+                                            "marchand"
+                                        ],
+                                        "example": "client"
+                                    },
+                                    "code_marchand": {
+                                        "type": "string",
+                                        "example": "MARCHAND123"
                                     }
                                 },
                                 "type": "object"
@@ -367,18 +346,19 @@
                 ]
             }
         },
-        "/api/comptes/{id}": {
+        "/api/compte/{id}/solde": {
             "get": {
                 "tags": [
                     "Comptes"
                 ],
-                "summary": "Get a specific compte",
-                "description": "Display the specified compte.",
-                "operationId": "6e09f50be50deda174a3cfe0783aa5bc",
+                "summary": "Get compte solde by numero_compte",
+                "description": "Get the solde of a compte by numero_compte.",
+                "operationId": "60d128de95f3b4903fa8275b2004b3d2",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "Numero du compte",
                         "required": true,
                         "schema": {
                             "type": "string"
@@ -387,13 +367,13 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Compte details",
+                        "description": "Compte solde",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "data": {
-                                            "type": "object"
+                                        "solde": {
+                                            "type": "number"
                                         }
                                     },
                                     "type": "object"
@@ -407,14 +387,16 @@
                         "bearerAuth": []
                     }
                 ]
-            },
-            "put": {
+            }
+        },
+        "/api/compte/{id}/transfert": {
+            "post": {
                 "tags": [
                     "Comptes"
                 ],
-                "summary": "Update a compte",
-                "description": "Update the specified compte.",
-                "operationId": "d297e65d0047a33b97a85a376a3c4ac8",
+                "summary": "Transfer money from compte",
+                "description": "Perform a transfer from the compte.",
+                "operationId": "9c15e54886bbbd3cf37859b175cc1237",
                 "parameters": [
                     {
                         "name": "id",
@@ -426,19 +408,20 @@
                     }
                 ],
                 "requestBody": {
+                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "numero",
+                                    "montant"
+                                ],
                                 "properties": {
-                                    "solde": {
-                                        "type": "number"
+                                    "numero": {
+                                        "type": "string"
                                     },
-                                    "status": {
-                                        "type": "string",
-                                        "enum": [
-                                            "actif",
-                                            "inactif"
-                                        ]
+                                    "montant": {
+                                        "type": "number"
                                     }
                                 },
                                 "type": "object"
@@ -448,13 +431,13 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Compte updated",
+                        "description": "Transfer successful",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "data": {
-                                            "type": "object"
+                                        "message": {
+                                            "type": "string"
                                         }
                                     },
                                     "type": "object"
@@ -468,14 +451,82 @@
                         "bearerAuth": []
                     }
                 ]
-            },
-            "delete": {
+            }
+        },
+        "/api/compte/{id}/paiement": {
+            "post": {
                 "tags": [
                     "Comptes"
                 ],
-                "summary": "Delete a compte",
-                "description": "Remove the specified compte.",
-                "operationId": "453ca31f0841564467d9d511553f829e",
+                "summary": "Make a payment from compte",
+                "description": "Perform a payment from the compte.",
+                "operationId": "9e079e4ba6a1f6d9f038df15483ce1d6",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "montant"
+                                ],
+                                "properties": {
+                                    "telephone": {
+                                        "type": "string"
+                                    },
+                                    "code_marchant": {
+                                        "type": "string"
+                                    },
+                                    "montant": {
+                                        "type": "number"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Payment successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/compte/{id}/transaction": {
+            "get": {
+                "tags": [
+                    "Comptes"
+                ],
+                "summary": "Get compte transactions",
+                "description": "Get transactions for the compte.",
+                "operationId": "9b0f5c2cd4e8dbf0cf8a2ccb7aaf5bad",
                 "parameters": [
                     {
                         "name": "id",
@@ -488,13 +539,51 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Compte deleted",
+                        "description": "List of transactions",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "message": {
-                                            "type": "string"
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/compte/dashboard": {
+            "get": {
+                "tags": [
+                    "Comptes"
+                ],
+                "summary": "Get compte dashboard",
+                "description": "Get compte dashboard for authenticated user.",
+                "operationId": "c481c5e3625dbdfc4e72c602b3a97b24",
+                "responses": {
+                    "200": {
+                        "description": "Dashboard data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "user": {
+                                            "type": "object"
+                                        },
+                                        "compte": {
+                                            "type": "object"
                                         }
                                     },
                                     "type": "object"
@@ -528,6 +617,12 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
+                                                "properties": {
+                                                    "montant": {
+                                                        "type": "string",
+                                                        "example": "+100.00"
+                                                    }
+                                                },
                                                 "type": "object"
                                             }
                                         }
@@ -559,25 +654,17 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "compte_source_id",
-                                    "compte_destination_id",
+                                    "numero",
                                     "montant"
                                 ],
                                 "properties": {
-                                    "compte_source_id": {
-                                        "type": "integer"
-                                    },
-                                    "compte_destination_id": {
-                                        "type": "integer"
+                                    "numero": {
+                                        "type": "string",
+                                        "example": "771234567"
                                     },
                                     "montant": {
-                                        "type": "number"
-                                    },
-                                    "description": {
-                                        "type": "string"
-                                    },
-                                    "mode": {
-                                        "type": "string"
+                                        "type": "number",
+                                        "example": 100
                                     }
                                 },
                                 "type": "object"
@@ -623,21 +710,16 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "compte_source_id",
+                                    "numero",
                                     "montant"
                                 ],
                                 "properties": {
-                                    "compte_source_id": {
-                                        "type": "integer"
+                                    "numero": {
+                                        "description": "Numéro de téléphone ou code marchand",
+                                        "type": "string"
                                     },
                                     "montant": {
                                         "type": "number"
-                                    },
-                                    "description": {
-                                        "type": "string"
-                                    },
-                                    "mode": {
-                                        "type": "string"
                                     }
                                 },
                                 "type": "object"
@@ -682,6 +764,25 @@
         {
             "name": "Comptes",
             "description": "Comptes"
+        }
+    ],
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "description": "Enter your Bearer token"
+            },
+            "sanctum": {
+                "type": "http",
+                "scheme": "bearer",
+                "description": "Enter your Bearer token"
+            }
+        }
+    },
+    "security": [
+        {
+            "sanctum": []
         }
     ]
 }
